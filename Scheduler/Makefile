@@ -26,12 +26,12 @@ driver.o: driver.c
 
 schedule_rr.o: schedule_rr.c
 	$(CC) $(CFLAGS) -c schedule_rr.c
+
+schedule_fcfs.o: schedule_fcfs.c
+	$(CC) $(CFLAGS) -c schedule_fcfs.c
 	
 schedule_rr_p.o: schedule_rr_p.c
 	$(CC) $(CFLAGS) -c schedule_rr_p.c
-
-schedule_rr_p.o: schedule_fcfs.c
-	$(CC) $(CFLAGS) -c schedule_fcfs.c
 
 list.o: list.c list.h
 	$(CC) $(CFLAGS) -c list.c
