@@ -13,7 +13,7 @@ clean:
 	rm -rf fcfs
 
 rr: driver.o list.o CPU.o schedule_rr.o
-	$(CC) $(CFLAGS) -o rr driver.o schedule_rr.o list.o CPU.o
+	$(CC) $(CFLAGS) -o rr driver.o schedule_rr.o list.o CPU.o 
 
 priority_rr: driver.o list.o CPU.o schedule_rr_p.o
 	$(CC) $(CFLAGS) -o priority_rr driver.o schedule_rr_p.o list.o CPU.o
