@@ -7,7 +7,7 @@
 #include "CPU.h"
 
 struct node *stack;
-int quantum = 2;
+int quantum = 10;
 
 // add a task to the list 
 void add(char *name, int priority, int burst){
@@ -22,21 +22,24 @@ void add(char *name, int priority, int burst){
 // invoke the scheduler
 void schedule(){
   while (stack->next) {
+    struct node *next = stack->next;
     if (stack->task->burst > quantum) {
-
-      printf("a\n");    
       run(stack->task, quantum);
-      printf("a\n");
-      printf("%lu\n", stack->task->burst);
       stack->task->burst -= quantum;
-      printf("a\n");    
       push(&stack, stack->task);
-      printf("a\n");    
-      stack = stack->next;
-      printf("a\n");    
     } else {
       run(stack->task, stack->task->burst);
-      printf("b\n");    
+      free(stack);
     }
-  }  
+    stack = next;
+  }
+  while (stack->task->burst > 0) {
+      if (stack->task->burst > quantum) {
+          run(stack->task, quantum);
+      } else {
+          run(stack->task, stack->task->burst);
+      }
+      stack->task->burst -= quantum;
+  }
+  free(stack);
 }
