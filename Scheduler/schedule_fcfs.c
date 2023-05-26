@@ -7,7 +7,6 @@
 #include "CPU.h"
 
 struct node *stack;
-int slice = 30;
 
 // add a task to the list 
 void add(char *name, int priority, int burst){
@@ -20,10 +19,11 @@ void add(char *name, int priority, int burst){
 
 // invoke the scheduler
 void schedule() {
-  struct node *temp = stack;
-  while (temp->next) {
-    run(temp->task, temp->task->burst);
-    temp = temp->next;
+  while (stack->next) {
+    run(stack->task, stack->task->burst);
+    struct node *temp = stack->next;
+    free(stack);
+    stack = temp;
   }
-  run(temp->task, temp->task->burst);
+  run(stack->task, stack->task->burst);
 }
