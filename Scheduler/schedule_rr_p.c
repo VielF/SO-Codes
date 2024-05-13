@@ -1,4 +1,4 @@
-#include "schedule_rr.h"
+#include "schedule_rr_p.h"
 
 // add a task to the list 
 void add(char *name, int priority, int burst){
