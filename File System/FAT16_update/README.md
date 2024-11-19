@@ -1,8 +1,8 @@
 # Abstrato
 
-Trabalho de implementação de sistema de arquivo FAT16 para disciplina de Sistemas Operacionais.
+Sistema de arquivo FAT16 para disciplina de Sistemas Operacionais.
 
-Trabalho M3 - FAT16. Alunos: Larissa de Souza, Paulo Hermans e Vinícius Schütz Piva. Data: 25/06.
+Atualizado por Larissa de Souza, Paulo Hermans e Vinícius Schütz Piva.
 
 # Instruções de Compilação
 
