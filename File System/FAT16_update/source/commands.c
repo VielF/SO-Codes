@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include "commands.h"
 #include "fat16.h"
+#include "fat32.h"
 #include "support.h"
 
 #include <errno.h>
@@ -31,7 +32,7 @@ struct far_dir_searchres find_in_root(struct fat_dir *dirs, char *filename, stru
 
 		if (dirs[i].name[0] == '\0') continue;
 
-		if (memcmp((char *) dirs[i].name, filename, FAT16STR_SIZE) == 0)
+		if (memcmp((char *) dirs[i].name, filename, FAT32STR_SIZE) == 0)
 		{
 			res.found = true;
 			res.fdir  = dirs[i];
@@ -66,7 +67,7 @@ struct fat_dir *ls(FILE *fp, struct fat_bpb *bpb)
 void mv(FILE *fp, char *source, char* dest, struct fat_bpb *bpb)
 {
 
-	char source_rname[FAT16STR_SIZE_WNULL], dest_rname[FAT16STR_SIZE_WNULL];
+	char source_rname[FAT32STR_SIZE_WNULL], dest_rname[FAT32STR_SIZE_WNULL];
 
 	/*
 	 * Aqui converte-se os nomes dos arquivos, que estão por padrão no formato
@@ -77,8 +78,8 @@ void mv(FILE *fp, char *source, char* dest, struct fat_bpb *bpb)
 	 * Note que o padding() do professor mesmo assim incluí NULL byte, por isso
 	 * a diferença de tramanho entre FAT16STR_SIZE v. FAT16STR_SIZE_WNULL.
 	 */
-	bool badname = cstr_to_fat16wnull(source, source_rname)
-	            || cstr_to_fat16wnull(dest,   dest_rname);
+	bool badname = cstr_to_fat32wnull(source, source_rname)
+	            || cstr_to_fat32wnull(dest,   dest_rname);
 
 	/*
 	 * Não foi possivel converter de C-String → FAT16str.
@@ -111,7 +112,7 @@ void mv(FILE *fp, char *source, char* dest, struct fat_bpb *bpb)
 	 * Le-se, usando read_bytes() função provida pelo professor, do disco as
 	 * entradas de diretório → struct fat_dir root[root_size]
 	 */
-	struct fat_dir root[root_size];
+	struct fat_dir root[z];
 
 	if (read_bytes(fp, root_address, &root, root_size) == RB_ERROR)
 		error_at_line(EXIT_FAILURE, EIO, __FILE__, __LINE__, "erro ao ler struct fat_dir");
@@ -142,7 +143,7 @@ void mv(FILE *fp, char *source, char* dest, struct fat_bpb *bpb)
 	 * Mover o arquivo dentro do mesmo diretório consiste somente em renomeálo.
 	 * Copia-se o nome de destino à estrutura fat_dir que achamos via find_int_root().
 	 */
-	memcpy(dir1.fdir.name, dest_rname, sizeof(char) * FAT16STR_SIZE);
+	memcpy(dir1.fdir.name, dest_rname, sizeof(char) * FAT32STR_SIZE);
 
 	/*
 	 * Onde em disco está dir1
@@ -168,10 +169,10 @@ void mv(FILE *fp, char *source, char* dest, struct fat_bpb *bpb)
 
 void rm(FILE* fp, char* filename, struct fat_bpb* bpb)
 {
-	char fat16_rname[FAT16STR_SIZE_WNULL];
+	char fat32_rname[FAT32STR_SIZE_WNULL];
 
 	// Converte o nome do arquivo para o formato FAT16.
-	if (cstr_to_fat16wnull(filename, fat16_rname))
+	if (cstr_to_fat32wnull(filename, fat32_rname))
 	{
 		fprintf(stderr, "Nome de arquivo inválido.\n");
 		exit(EXIT_FAILURE);
@@ -189,7 +190,7 @@ void rm(FILE* fp, char* filename, struct fat_bpb* bpb)
 	}
 
 	// Encontra a entrada do diretório correspondente ao arquivo.
-	struct far_dir_searchres dir = find_in_root(&root[0], fat16_rname, bpb);
+	struct far_dir_searchres dir = find_in_root(&root[0], fat32_rname, bpb);
 
 	// Verifica se o arquivo foi encontrado.
 	if (dir.found == false)
@@ -216,7 +217,7 @@ void rm(FILE* fp, char* filename, struct fat_bpb* bpb)
 	size_t   count          = 0;
 
 	/* Continua a zerar os clusters até chegar no End Of File */
-	while (cluster_number < FAT16_EOF_LO)
+	while (cluster_number < FAT32_EOF)
 	{
 		uint32_t infat_cluster_address = fat_address + cluster_number * sizeof (uint16_t);
 		read_bytes(fp, infat_cluster_address, &cluster_number, sizeof (uint16_t));
@@ -257,14 +258,38 @@ struct fat16_newcluster_info fat16_find_free_cluster(FILE* fp, struct fat_bpb* b
 	return (struct fat16_newcluster_info) {0};
 }
 
+struct fat32_newcluster_info fat32_find_free_cluster(FILE* fp, struct fat_bpb* bpb)
+{
+
+	/* Essa implementação de FAT16 não funciona com discos grandes. */
+	assert(bpb->large_n_sects == 0);
+
+	uint16_t cluster        = 0x0;
+	uint32_t fat_address    = bpb_faddress(bpb);
+	uint32_t total_clusters = bpb_fdata_cluster_count(bpb);
+
+	for (cluster = 0x2; cluster < total_clusters; cluster++)
+	{
+		uint16_t entry;
+		uint32_t entry_address = fat_address + cluster * 2;
+
+		(void) read_bytes(fp, entry_address, &entry, sizeof (uint16_t));
+
+		if (entry == 0x0)
+			return (struct fat32_newcluster_info) { .cluster = cluster, .address = entry_address };
+	}
+
+	return (struct fat32_newcluster_info) {0};
+}
+
 void cp(FILE *fp, char* source, char* dest, struct fat_bpb *bpb)
 {
 
 	/* Manipulação de diretório explicado em mv() */
-	char source_rname[FAT16STR_SIZE_WNULL], dest_rname[FAT16STR_SIZE_WNULL];
+	char source_rname[FAT32STR_SIZE_WNULL], dest_rname[FAT32STR_SIZE_WNULL];
 
-	bool badname = cstr_to_fat16wnull(source, source_rname)
-	            || cstr_to_fat16wnull(dest,   dest_rname);
+	bool badname = cstr_to_fat32wnull(source, source_rname)
+	            || cstr_to_fat32wnull(dest,   dest_rname);
 
 	if (badname)
 	{
@@ -289,7 +314,7 @@ void cp(FILE *fp, char* source, char* dest, struct fat_bpb *bpb)
 		error(EXIT_FAILURE, 0, "Não permitido substituir arquivo %s via cp.", dest);
 
 	struct fat_dir new_dir = dir1.fdir;
-	memcpy(new_dir.name, dest_rname, FAT16STR_SIZE);
+	memcpy(new_dir.name, dest_rname, FAT32STR_SIZE);
 
 	/* Dentry */
 
@@ -333,8 +358,8 @@ void cp(FILE *fp, char* source, char* dest, struct fat_bpb *bpb)
 		 * É alocado os clusters de tráz para frente; o último é alocado primeiro,
 		 * primariamente devido a necessidade de seu valor ser FAT16_EOF_HI.
 		 */
-		struct fat16_newcluster_info next_cluster,
-		                             prev_cluster = { .cluster = FAT16_EOF_HI };
+		struct fat32_newcluster_info next_cluster,
+		                             prev_cluster = { .cluster = FAT32_EOF };
 
 		/* Quantos clusters o arquivo necessita */
 		uint32_t cluster_count = dir1.fdir.file_size / bpb->bytes_p_sect / bpb->sector_p_clust + 1;
@@ -343,7 +368,7 @@ void cp(FILE *fp, char* source, char* dest, struct fat_bpb *bpb)
 		while (cluster_count--)
 		{
 			prev_cluster = next_cluster;
-			next_cluster = fat16_find_free_cluster(fp, bpb); /* Busca-se novo cluster */
+			next_cluster = fat32_find_free_cluster(fp, bpb); /* Busca-se novo cluster */
 
 			if (next_cluster.cluster == 0x0)
 				error_at_line(EXIT_FAILURE, EIO, __FILE__, __LINE__, "Disco cheio (imagem foi corrompida)");
@@ -410,9 +435,9 @@ void cat(FILE* fp, char* filename, struct fat_bpb* bpb)
 	 * Leitura do diretório raiz explicado em mv().
 	 */
 
-	char rname[FAT16STR_SIZE_WNULL];
+	char rname[FAT32STR_SIZE_WNULL];
 
-	bool badname = cstr_to_fat16wnull(filename, rname);
+	bool badname = cstr_to_fat32wnull(filename, rname);
 
 	if (badname)
 	{
