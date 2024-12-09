@@ -1,4 +1,4 @@
-# Abstrato
+# Resumo
 
 Sistema de arquivo FAT16 para disciplina de Sistemas Operacionais.
 
