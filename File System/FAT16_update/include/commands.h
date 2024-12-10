@@ -19,9 +19,9 @@ struct far_dir_searchres
  * Esta struct encapsula o resultado de fat16_find_free_cluster()
  *
  */
-struct fat16_newcluster_info
+struct fat32_newcluster_info
 {
-	uint16_t cluster;
+	uint32_t cluster;
 	uint32_t address;
 };
 

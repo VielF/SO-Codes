@@ -5,7 +5,6 @@
 #include <stdbool.h>
 #include "commands.h"
 #include "fat16.h"
-#include "fat32.h"
 #include "support.h"
 
 #include <errno.h>
@@ -112,7 +111,7 @@ void mv(FILE *fp, char *source, char* dest, struct fat_bpb *bpb)
 	 * Le-se, usando read_bytes() função provida pelo professor, do disco as
 	 * entradas de diretório → struct fat_dir root[root_size]
 	 */
-	struct fat_dir root[z];
+	struct fat_dir root[root_size];
 
 	if (read_bytes(fp, root_address, &root, root_size) == RB_ERROR)
 		error_at_line(EXIT_FAILURE, EIO, __FILE__, __LINE__, "erro ao ler struct fat_dir");
@@ -212,19 +211,19 @@ void rm(FILE* fp, char* filename, struct fat_bpb* bpb)
 
 	/* Leitura da tabela FAT explicado na função cat() */
 	uint32_t fat_address    = bpb_faddress(bpb);
-	uint16_t cluster_number = dir.fdir.starting_cluster;
+	uint32_t cluster_number = dir.fdir.starting_cluster;
 	uint16_t null           = 0x0;
 	size_t   count          = 0;
 
 	/* Continua a zerar os clusters até chegar no End Of File */
 	while (cluster_number < FAT32_EOF)
 	{
-		uint32_t infat_cluster_address = fat_address + cluster_number * sizeof (uint16_t);
-		read_bytes(fp, infat_cluster_address, &cluster_number, sizeof (uint16_t));
+		uint32_t infat_cluster_address = fat_address + cluster_number * sizeof (uint32_t);
+		read_bytes(fp, infat_cluster_address, &cluster_number, sizeof (uint32_t));
 
 		/* Setar o cluster number como NULL */
 		(void) fseek(fp, infat_cluster_address, SEEK_SET);
-		(void) fwrite(&null, sizeof (uint16_t), 1, fp);
+		(void) fwrite(&null, sizeof (uint32_t), 1, fp);
 
 		count++;
 	}
@@ -234,37 +233,13 @@ void rm(FILE* fp, char* filename, struct fat_bpb* bpb)
 	return;
 }
 
-struct fat16_newcluster_info fat16_find_free_cluster(FILE* fp, struct fat_bpb* bpb)
-{
-
-	/* Essa implementação de FAT16 não funciona com discos grandes. */
-	assert(bpb->large_n_sects == 0);
-
-	uint16_t cluster        = 0x0;
-	uint32_t fat_address    = bpb_faddress(bpb);
-	uint32_t total_clusters = bpb_fdata_cluster_count(bpb);
-
-	for (cluster = 0x2; cluster < total_clusters; cluster++)
-	{
-		uint16_t entry;
-		uint32_t entry_address = fat_address + cluster * 2;
-
-		(void) read_bytes(fp, entry_address, &entry, sizeof (uint16_t));
-
-		if (entry == 0x0)
-			return (struct fat16_newcluster_info) { .cluster = cluster, .address = entry_address };
-	}
-
-	return (struct fat16_newcluster_info) {0};
-}
-
 struct fat32_newcluster_info fat32_find_free_cluster(FILE* fp, struct fat_bpb* bpb)
 {
 
 	/* Essa implementação de FAT16 não funciona com discos grandes. */
 	assert(bpb->large_n_sects == 0);
 
-	uint16_t cluster        = 0x0;
+	uint32_t cluster        = 0x0;
 	uint32_t fat_address    = bpb_faddress(bpb);
 	uint32_t total_clusters = bpb_fdata_cluster_count(bpb);
 
@@ -273,7 +248,7 @@ struct fat32_newcluster_info fat32_find_free_cluster(FILE* fp, struct fat_bpb* b
 		uint16_t entry;
 		uint32_t entry_address = fat_address + cluster * 2;
 
-		(void) read_bytes(fp, entry_address, &entry, sizeof (uint16_t));
+		(void) read_bytes(fp, entry_address, &entry, sizeof (uint32_t));
 
 		if (entry == 0x0)
 			return (struct fat32_newcluster_info) { .cluster = cluster, .address = entry_address };

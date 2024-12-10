@@ -53,7 +53,7 @@ void show_files(struct fat_dir *dirs)
 
 		struct pretty_int num = pretty_print(cur->file_size);
 
-        fprintf(stdout, "0x%-.*x  %.*s  %4i %s\n", 2, cur->attr, FAT16STR_SIZE, cur->name, num.num, num.suff);
+        fprintf(stdout, "0x%-.*x  %.*s  %4i %s\n", 2, cur->attr, FAT32STR_SIZE, cur->name, num.num, num.suff);
     }
 
     return;

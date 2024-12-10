@@ -1,5 +1,5 @@
-#ifndef FAT16_H
-#define FAT16_H
+#ifndef FAT32_H
+#define FAT32_H
 
 #include <stdint.h>
 #include <stdio.h>
@@ -18,18 +18,15 @@
 
 #pragma pack(push, 1)
 struct fat_dir {
-	unsigned char name[11]; /* Short name + file extension */
+	unsigned char name[16]; /* filename + filename extension */
+	uint8_t flag; /* flag byte */
+    uint16_t unused_fat32; /* unused in fat32 */
+    uint16_t starting_cluster; /* starting cluster high word */
+	uint16_t time; /* time file was created */
+	uint16_t date; /* date file was created */
+    uint16_t starting_cluster_lo; /* starting cluster low word */
+	uint32_t file_size; /* file size in bytes */
 	uint8_t attr; /* file attributes */
-	uint8_t ntres; /* reserved for Windows NT, Set value to 0 when a file is created. */
-	uint8_t creation_stamp; /* milisecond timestamp at file creation time */
-	uint16_t creation_time; /* time file was created */
-	uint16_t ctreation_date; /* date file was created */
-	uint16_t last_access_date; /* last access date (last read/written) */
-	uint16_t reserved_fat32; /* reserved for fat32 */
-	uint16_t last_write_time; /* time of last write */
-	uint16_t last_write_date; /* date of last write */
-	uint16_t starting_cluster; /* starting cluster */
-	uint32_t file_size; /* 32-bit */
 };
 
 /* Boot Sector and BPB
@@ -73,13 +70,12 @@ uint32_t bpb_fdata_cluster_count(struct fat_bpb* bpb);
 
 ///
 
-#define FAT16STR_SIZE       11
-#define FAT16STR_SIZE_WNULL 12
+#define FAT32STR_SIZE       27
+#define FAT32STR_SIZE_WNULL 28
 
 #define RB_ERROR -1
 #define RB_OK     0
 
-#define FAT16_EOF_LO 0xfff8
-#define FAT16_EOF_HI 0xffff
+#define FAT32_EOF 0xffffffff
 
 #endif
