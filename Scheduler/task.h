@@ -12,6 +12,7 @@ typedef struct task {
     int priority;
     int burst;
     int deadline;
+    int remaining_time;  
 } Task;
 
 #endif

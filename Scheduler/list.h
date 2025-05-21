@@ -13,3 +13,5 @@ struct node {
 void insert(struct node **head, Task *task);
 void delete(struct node **head, Task *task);
 void traverse(struct node *head);
+void insert_at_end(struct node **head, Task *newTask);
+
